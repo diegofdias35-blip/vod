@@ -40,7 +40,7 @@ function App() {
       width: '100%',
       height: '100%',
       video: videoId,
-      autoplay: true,
+      autoplay: false, // Desabilitado para evitar bloqueios 429 no mobile antes do clique
       controls: true,
       parent: ["vod-gamma.vercel.app", "localhost"] 
     };
