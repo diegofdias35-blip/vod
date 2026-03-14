@@ -40,7 +40,8 @@ function App() {
       width: '100%',
       height: '100%',
       video: videoId,
-      autoplay: false, // Desabilitado para evitar bloqueios 429 no mobile antes do clique
+      autoplay: false,
+      muted: false, // Forçar falso para o navegador não tentar bypass de políticas
       controls: true,
       parent: ["vod-gamma.vercel.app", "localhost"] 
     };
@@ -55,16 +56,33 @@ function App() {
       }
     });
 
-    const saveProgressInterval = setInterval(() => {
-      if (playerRef.current) {
-        const currentTime = playerRef.current.getCurrentTime();
-        if (currentTime > 0) {
-          localStorage.setItem(`twitch_vod_${videoId}`, currentTime);
-        }
-      }
-    }, 5000);
+    let saveProgressInterval;
 
-    return () => clearInterval(saveProgressInterval);
+    playerRef.current.addEventListener(window.Twitch.Player.PLAY, () => {
+      // Inicia o salvamento apenas quando o vídeo realmente começa a tocar
+      if (!saveProgressInterval) {
+        saveProgressInterval = setInterval(() => {
+          if (playerRef.current) {
+            const currentTime = playerRef.current.getCurrentTime();
+            if (currentTime > 0) {
+              localStorage.setItem(`twitch_vod_${videoId}`, currentTime);
+            }
+          }
+        }, 5000);
+      }
+    });
+
+    playerRef.current.addEventListener(window.Twitch.Player.PAUSE, () => {
+      // Opcional: Pausar o salvamento quando o vídeo pausar para poupar a CPU do mobile
+      if (saveProgressInterval) {
+        clearInterval(saveProgressInterval);
+        saveProgressInterval = null;
+      }
+    });
+
+    return () => {
+      if (saveProgressInterval) clearInterval(saveProgressInterval);
+    };
   }, [videoId])
 
   useEffect(() => {
