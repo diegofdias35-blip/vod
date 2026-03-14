@@ -143,13 +143,14 @@ function App() {
       setIsSpeedingUp(true);
       
       // Como a Twitch API não expõe setPlaybackRate, fazemos um "fast-forward" manual
-      // Pulando 0.5s a cada 250ms (efetivamente rodando a 2x + 1x = 3x original rate mas dá o feeling de aceleração)
+      // Reduzindo a frequência (de 250ms para 500ms) e aumentando o pulo (para 1s)
+      // para evitar bloqueios Rate Limit (Erro 429) do firewall Kasada da Twitch
       const speedInterval = setInterval(() => {
         if (playerRef.current) {
           const currentTime = playerRef.current.getCurrentTime();
-          playerRef.current.seek(currentTime + 0.5);
+          playerRef.current.seek(currentTime + 1);
         }
-      }, 250);
+      }, 500);
 
       // Guardamos o ID do intervalo no dataset do wrapper para limpar depois
       if (wrapperRef.current) {
