@@ -10,6 +10,7 @@ function App() {
   
   const playerRef = useRef(null)
   const wrapperRef = useRef(null)
+  const lastTapRef = useRef({ left: 0, right: 0 })
   
   const extractVideoId = (inputUrl) => {
     const regex = /(?:twitch\.tv\/videos\/|^\d+$)(\d+)/;
@@ -109,6 +110,20 @@ function App() {
     }
   }
 
+  const handleTap = (side) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 350; // Tempo máximo entre toques em milissegundos
+    
+    if (now - lastTapRef.current[side] < DOUBLE_TAP_DELAY) {
+      // É um duplo clique!
+      handleSeek(side === 'left' ? -10 : 10);
+      lastTapRef.current[side] = 0; // Zera para o próximo
+    } else {
+      // É apenas o primeiro clique
+      lastTapRef.current[side] = now;
+    }
+  }
+
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       // Entrar em tela cheia
@@ -191,12 +206,12 @@ function App() {
 
               <div 
                 className="overlay-left" 
-                onDoubleClick={() => handleSeek(-10)}
+                onClick={() => handleTap('left')}
                 title="Duplo clique: Voltar 10s"
               />
               <div 
                 className="overlay-right" 
-                onDoubleClick={() => handleSeek(10)}
+                onClick={() => handleTap('right')}
                 title="Duplo clique: Avançar 10s"
               />
 
