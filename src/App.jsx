@@ -8,9 +8,14 @@ function App() {
   const [showRightAnim, setShowRightAnim] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   
+  // Estados para exibição do acúmulo de tempo
+  const [accumulatedLeft, setAccumulatedLeft] = useState(0)
+  const [accumulatedRight, setAccumulatedRight] = useState(0)
+  
   const playerRef = useRef(null)
   const wrapperRef = useRef(null)
   const lastTapRef = useRef({ left: 0, right: 0 })
+  const tapTimeoutRef = useRef({ left: null, right: null })
   
   const extractVideoId = (inputUrl) => {
     const regex = /(?:twitch\.tv\/videos\/|^\d+$)(\d+)/;
@@ -95,12 +100,12 @@ function App() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const handleSeek = (seconds) => {
+  const commitSeekAndAnimate = (side, totalSeconds) => {
     if (playerRef.current) {
       const currentTime = playerRef.current.getCurrentTime();
-      playerRef.current.seek(currentTime + seconds);
+      playerRef.current.seek(currentTime + totalSeconds);
       
-      if (seconds > 0) {
+      if (side === 'right') {
         setShowRightAnim(true)
         setTimeout(() => setShowRightAnim(false), 500)
       } else {
@@ -108,18 +113,50 @@ function App() {
         setTimeout(() => setShowLeftAnim(false), 500)
       }
     }
+    // Zera os acumuladores visuais depois da animação
+    setTimeout(() => {
+      if (side === 'right') setAccumulatedRight(0);
+      else setAccumulatedLeft(0);
+    }, 500);
   }
 
   const handleTap = (side) => {
     const now = Date.now();
-    const DOUBLE_TAP_DELAY = 350; // Tempo máximo entre toques em milissegundos
+    const DOUBLE_TAP_DELAY = 400; // Tempo máximo entre toques em milissegundos
     
+    // Anula o timer anterior se a pessoa continuar clicando freneticamente
+    if (tapTimeoutRef.current[side]) {
+      clearTimeout(tapTimeoutRef.current[side]);
+    }
+
     if (now - lastTapRef.current[side] < DOUBLE_TAP_DELAY) {
-      // É um duplo clique!
-      handleSeek(side === 'left' ? -10 : 10);
-      lastTapRef.current[side] = 0; // Zera para o próximo
+      // É um duplo clique ou cliques subsequentes!
+      if (side === 'left') {
+        // Se já tinha começado, soma +10. Se não, é o 2º clique, começa com 10.
+        setAccumulatedLeft(prev => prev === 0 ? 10 : prev + 10);
+      } else {
+        setAccumulatedRight(prev => prev === 0 ? 10 : prev + 10);
+      }
+
+      // Agenda o seek real (executar a ação de pular o tempo) para 400ms depois do ÚLTIMO clique
+      tapTimeoutRef.current[side] = setTimeout(() => {
+        // Pega o valor acumulado atual através do valor da closure ou ref e commita
+        if (side === 'left') {
+          setAccumulatedLeft(currentVal => {
+            commitSeekAndAnimate('left', -currentVal);
+            return currentVal;
+          });
+        } else {
+          setAccumulatedRight(currentVal => {
+            commitSeekAndAnimate('right', currentVal);
+            return currentVal;
+          });
+        }
+      }, 400);
+
+      lastTapRef.current[side] = now; // Atualiza o último toque
     } else {
-      // É apenas o primeiro clique
+      // É apenas o primeiro clique (ou clique após muito tempo)
       lastTapRef.current[side] = now;
     }
   }
@@ -215,9 +252,13 @@ function App() {
                 title="Duplo clique: Avançar 10s"
               />
 
-              {/* Animações de Feedback */}
-              {showLeftAnim && <div className="seek-anim left">-10s</div>}
-              {showRightAnim && <div className="seek-anim right">+10s</div>}
+              {/* Animações de Feedback com acúmulo */}
+              {(showLeftAnim || accumulatedLeft > 0) && (
+                <div className="seek-anim left">-{accumulatedLeft}s</div>
+              )}
+              {(showRightAnim || accumulatedRight > 0) && (
+                <div className="seek-anim right">+{accumulatedRight}s</div>
+              )}
             </>
           )}
         </div>
