@@ -44,14 +44,7 @@ function App() {
       video: videoId,
       autoplay: true,
       controls: true,
-      parent: [
-        window.location.hostname, 
-        "vod-gamma.vercel.app",
-        "localhost", 
-        "127.0.0.1", 
-        "192.168.100.75", 
-        "192.168.100.76"
-      ] 
+      parent: ["vod-gamma.vercel.app", "localhost"] 
     };
 
     playerRef.current = new window.Twitch.Player("twitch-embed", options);
