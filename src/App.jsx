@@ -46,6 +46,7 @@ function App() {
       controls: true,
       parent: [
         window.location.hostname, 
+        "vod-gamma.vercel.app",
         "localhost", 
         "127.0.0.1", 
         "192.168.100.75", 
