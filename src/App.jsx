@@ -7,11 +7,9 @@ function App() {
   const [showLeftAnim, setShowLeftAnim] = useState(false)
   const [showRightAnim, setShowRightAnim] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [isSpeedingUp, setIsSpeedingUp] = useState(false)
   
   const playerRef = useRef(null)
   const wrapperRef = useRef(null)
-  const holdTimerRef = useRef(null)
   
   const extractVideoId = (inputUrl) => {
     const regex = /(?:twitch\.tv\/videos\/|^\d+$)(\d+)/;
@@ -134,49 +132,6 @@ function App() {
     }
   }
 
-  // --- Handlers para "Segurar para 2x" ---
-  const handlePointerDown = () => {
-    if (!playerRef.current) return;
-    
-    // Inicia o timer: se o dedo ficar na tela por mais de 500ms, ativa pseudo-2x
-    holdTimerRef.current = setTimeout(() => {
-      setIsSpeedingUp(true);
-      
-      // Como a Twitch API não expõe setPlaybackRate, fazemos um "fast-forward" manual
-      // Reduzindo a frequência (de 250ms para 500ms) e aumentando o pulo (para 1s)
-      // para evitar bloqueios Rate Limit (Erro 429) do firewall Kasada da Twitch
-      const speedInterval = setInterval(() => {
-        if (playerRef.current) {
-          const currentTime = playerRef.current.getCurrentTime();
-          playerRef.current.seek(currentTime + 1);
-        }
-      }, 500);
-
-      // Guardamos o ID do intervalo no dataset do wrapper para limpar depois
-      if (wrapperRef.current) {
-        wrapperRef.current.dataset.speedInterval = speedInterval.toString();
-      }
-    }, 500); 
-  }
-
-  const handlePointerUp = () => {
-    // Se soltar antes dos 500ms, cancela o timer
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-
-    // Se estava em pseudo-2x, volta ao normal limpando o intervalo
-    if (isSpeedingUp) {
-      setIsSpeedingUp(false);
-      
-      if (wrapperRef.current && wrapperRef.current.dataset.speedInterval) {
-        clearInterval(parseInt(wrapperRef.current.dataset.speedInterval));
-        wrapperRef.current.dataset.speedInterval = "";
-      }
-    }
-  }
-
   return (
     <div className="app-container">
       <header className="header">
@@ -219,30 +174,17 @@ function App() {
               <div 
                 className="overlay-left" 
                 onDoubleClick={() => handleSeek(-10)}
-                onPointerDown={handlePointerDown}
-                onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerUp}
-                title="Duplo clique: Voltar 10s | Segurar: 2x Speed"
+                title="Duplo clique: Voltar 10s"
               />
               <div 
                 className="overlay-right" 
                 onDoubleClick={() => handleSeek(10)}
-                onPointerDown={handlePointerDown}
-                onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerUp}
-                title="Duplo clique: Avançar 10s | Segurar: 2x Speed"
+                title="Duplo clique: Avançar 10s"
               />
 
               {/* Animações de Feedback */}
               {showLeftAnim && <div className="seek-anim left">-10s</div>}
               {showRightAnim && <div className="seek-anim right">+10s</div>}
-              
-              {/* Feedback de Velocidade 2x */}
-              {isSpeedingUp && (
-                <div className="speed-anim">
-                  Velocidade 2x ⏩
-                </div>
-              )}
             </>
           )}
         </div>
